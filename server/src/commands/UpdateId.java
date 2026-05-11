@@ -15,6 +15,14 @@ import java.util.Optional;
  * Команда, которая обновляет элемент по id.
  */
 public class UpdateId implements Command {
+
+    /**
+     * Вызывает команду
+     * @param manager менеджер коллекции
+     * @param args    аргументы, описывающие поля билета
+     * @param userId  идентификатор создателя
+     * @return Ответ клиенту
+     */
     public CommandResponse execute(Manager manager, Map<String, Object> args, int userId) {
         if (args == null) return new CommandResponse("Некорректные аргументы");
         try {

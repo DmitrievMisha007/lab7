@@ -1,9 +1,23 @@
 package core;
+import interfases.Command;
 
 /**
- * Класс принимает запрос и исполняет нужную команду
+ * Фабрика команд. По имени команды из запроса выбирает соответствующий
+ * объект из {@link Invoker} и выполняет его с переданными аргументами и userId.
+ *
+ * @see Invoker
+ * @see Command
  */
 public class CommandFactory {
+    /**
+     * Выполняет команду, идентифицированную по имени в запросе.
+     *
+     * @param request запрос клиента (имя команды и аргументы)
+     * @param manager менеджер коллекции
+     * @param invoker хранилище экземпляров команд
+     * @param userId  идентификатор пользователя
+     * @return ответ {@link CommandResponse}, сформированный командой
+     */
     public CommandResponse executeCommandByRequest(CommandRequest request, Manager manager, Invoker invoker, int userId){
         CommandResponse response = switch (request.getName()){
             case "add"-> invoker.add.execute(manager, request.getArgs(), userId); // +

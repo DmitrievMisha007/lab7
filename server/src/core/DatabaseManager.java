@@ -3,6 +3,14 @@ package core;
 import java.sql.*;
 import java.util.Date;
 
+/**
+ * Управляет подключением к базе данных PostgreSQL и выполняет все SQL-операции.
+ * <p>Обеспечивает инициализацию таблиц, загрузку/сохранение коллекции и аутентификацию
+ * пользователей. Все запросы используют {@link PreparedStatement} для защиты от SQL-инъекций.</p>
+ *
+ * @see Ticket
+ * @see Manager
+ */
 public class DatabaseManager {
     private final String url;
     private final String login;
@@ -15,10 +23,17 @@ public class DatabaseManager {
         this.url = "jdbc:postgresql://"+host+":"+port+"/"+dbName;
     }
 
+    /**
+     * Устанавливает соединение с базой данных.
+     * @throws SQLException если соединение не может быть установлено
+     */
     public void connect() throws SQLException {
         connection = DriverManager.getConnection(url, login, password);
     }
 
+    /**
+     * Закрывает соединение с базой данных, если оно открыто.
+     */
     public void closeConnection() {
         try {
             if (connection != null && !connection.isClosed()) {
@@ -29,6 +44,13 @@ public class DatabaseManager {
         }
     }
 
+    /**
+     * Инициализирует структуру базы данных: создаёт последовательность {@code ticket_id_seq}
+     * и таблицы {@code tickets}, {@code users} (если они ещё не созданы).
+     * Также синхронизирует последовательность с максимальным существующим id.
+     *
+     * @throws SQLException при ошибках выполнения SQL
+     */
     public void initDatabase() throws SQLException {
         try (Statement st = connection.createStatement()) {
             st.execute("CREATE SEQUENCE IF NOT EXISTS ticket_id_seq");
@@ -54,6 +76,12 @@ public class DatabaseManager {
         }
     }
 
+    /**
+     * Загружает все билеты из таблицы {@code tickets} и наполняет коллекцию менеджера.
+     *
+     * @param manager менеджер, в коллекцию которого загружаются объекты
+     * @throws SQLException при ошибке выполнения запроса
+     */
     public void loadCollection(Manager manager) throws SQLException {
         String sql = "SELECT * FROM tickets";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
@@ -99,6 +127,14 @@ public class DatabaseManager {
         }
     }
 
+    /**
+     * Добавляет новый билет в базу данных и присваивает ему сгенерированный ID.
+     *
+     * @param ticket объект {@link Ticket} с заполненными полями (кроме id)
+     * @param userId идентификатор пользователя-создателя
+     * @return сгенерированный идентификатор билета
+     * @throws SQLException при ошибке вставки
+     */
     public long addTicket(Ticket ticket, int userId) throws SQLException {
         String sql = "INSERT INTO tickets (name, x, y, creation_date, price, comment, refundable, type, " +
                 "event_name, event_tickets_count, event_event_type, user_id) " +
@@ -141,6 +177,16 @@ public class DatabaseManager {
         throw new SQLException("Не удалось получить id после вставки");
     }
 
+    /**
+     * Обновляет существующий билет в базе данных.
+     * Предварительно проверяет, что билет принадлежит указанному пользователю.
+     *
+     * @param id      идентификатор обновляемого билета
+     * @param newData объект с новыми данными
+     * @param userId  идентификатор пользователя, выполняющего обновление
+     * @throws SQLException если билет не найден или ошибка выполнения запроса
+     * @throws SecurityException если прав на изменение недостаточно
+     */
     public void updateTicket(long id, Ticket newData, int userId) throws SQLException {
         String checkSql = "SELECT user_id FROM tickets WHERE id = ?";
         try (PreparedStatement ps = connection.prepareStatement(checkSql)) {
@@ -181,6 +227,15 @@ public class DatabaseManager {
         }
     }
 
+    /**
+     * Удаляет билет из базы данных, если он принадлежит указанному пользователю.
+     *
+     * @param id     идентификатор билета
+     * @param userId идентификатор пользователя
+     * @return true, если объект был удалён
+     * @throws SQLException при ошибке выполнения запроса
+     * @throws SecurityException если прав на удаление недостаточно
+     */
     public boolean removeTicket(long id, int userId) throws SQLException {
         String checkSql = "SELECT user_id FROM tickets WHERE id = ?";
         try (PreparedStatement ps = connection.prepareStatement(checkSql)) {
@@ -199,6 +254,12 @@ public class DatabaseManager {
         }
     }
 
+    /**
+     * Удаляет из базы все билеты, созданные указанным пользователем.
+     *
+     * @param userId идентификатор пользователя
+     * @throws SQLException при ошибке выполнения запроса
+     */
     public void clearUserTickets(int userId) throws SQLException {
         String sql = "DELETE FROM tickets WHERE user_id = ?";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
@@ -207,6 +268,15 @@ public class DatabaseManager {
         }
     }
 
+    /**
+     * Регистрирует нового пользователя с указанным логином и паролем.
+     * Пароль хранится в виде MD5-хэша.
+     *
+     * @param login    логин (не должен быть занят)
+     * @param password пароль в открытом виде
+     * @return идентификатор созданного пользователя
+     * @throws SQLException если логин уже существует или произошла ошибка вставки
+     */
     public int registerUser(String login, String password) throws SQLException {
         // Проверим, не занят ли логин
         String checkSql = "SELECT id FROM users WHERE login = ?";
@@ -232,6 +302,14 @@ public class DatabaseManager {
         throw new SQLException("Не удалось зарегистрировать пользователя");
     }
 
+    /**
+     * Аутентифицирует пользователя по логину и паролю.
+     *
+     * @param login    логин
+     * @param password пароль в открытом виде
+     * @return идентификатор пользователя при успешной аутентификации
+     * @throws SQLException если логин или пароль неверны, или ошибка выполнения запроса
+     */
     public int authenticateUser(String login, String password) throws SQLException {
         String sql = "SELECT id FROM users WHERE login = ? AND password_hash = md5(?)";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {

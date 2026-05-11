@@ -3,6 +3,7 @@ package core;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 
+
 /**
  * Класс, описывающий событие для класса Ticket.
  */

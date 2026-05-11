@@ -6,7 +6,13 @@ import java.lang.reflect.Modifier;
 import java.util.*;
 
 /**
- * Класс, описывающий сущность билет.
+ * Класс, представляющий билет.
+ * Содержит все поля, соответствующие таблице {@code tickets}, а также методы
+ * для заполнения из аргументов, переданных клиентом.
+ *
+ * @see Coordinates
+ * @see Event
+ * @see TicketType
  */
 public class Ticket implements Comparable<Ticket>{
     private long id;
@@ -125,6 +131,12 @@ public class Ticket implements Comparable<Ticket>{
         return result.toString();
     }
 
+    /**
+     * Заполняет поля билета из переданной карты аргументов.
+     * Используется командами {@code add}, {@code update} и подобными.
+     *
+     * @param args Map, содержащий пары ключ-значение (имя поля – значение)
+     */
     public void fromRequest(Map<String, Object> args) {
         Iterator<Map.Entry<String, Object>> iterator = args.entrySet().iterator();
         while (iterator.hasNext()) {
@@ -162,9 +174,10 @@ public class Ticket implements Comparable<Ticket>{
 
 
     /**
-     * Сравнивает элементы по цене
-     * @param o элемент для сравнения
-     * @return 1 если данный элемент меньше, -1 если больше, 0 если элементы равны
+     * Сравнивает два билета по координатам (используется {@link Coordinates#compareTo}).
+     *
+     * @param o билет для сравнения
+     * @return 0 при равенстве, положительное или отрицательное число в зависимости от порядка
      */
     @Override
     public int compareTo(Ticket o) {

@@ -37,5 +37,4 @@ public class Coordinates implements Comparable<Coordinates>{
         else if ((this.x >= c.x && this.y >= c.y) || (this.x >= c.x && this.y < c.y)) return 1;
         return -1;
     }
-
 }

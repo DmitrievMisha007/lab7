@@ -10,6 +10,16 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
 
+
+/**
+ * Клиентская часть приложения. Устанавливает соединение с сервером,
+ * запрашивает у пользователя логин/пароль и в цикле обрабатывает ввод команд,
+ * отправляя их на сервер и выводя ответы.
+ * Поддерживает выполнение скриптов через команду {@code execute_script}.
+ *
+ * @see CommandRequest
+ * @see CommandResponse
+ */
 public class App {
     private final String host;
     private final int port;
@@ -33,8 +43,10 @@ public class App {
         this.port = port;
     }
 
-
-
+    /**
+     * Запускает клиент: подключается к серверу, запрашивает учётные данные и
+     * переходит в цикл обработки команд.
+     */
     public void start(){
         connectWithRetry();
         System.out.println("Connected to server " + host + ":" + port);
@@ -42,7 +54,6 @@ public class App {
 
         try (BufferedReader console = new BufferedReader(new InputStreamReader(System.in))) {
             this.console = console;
-            // Запрашиваем учётные данные один раз
             System.out.print("Введите логин: ");
             login = console.readLine();
             System.out.print("Введите пароль: ");
@@ -200,13 +211,15 @@ public class App {
     }
 
     /**
-     * Отправка запроса и получение ответа.
-     * Использует Java-сериализацию через ObjectOutputStream / ObjectInputStream.
+     * Отправляет запрос на сервер и ожидает ответ.
+     * @param request объект {@link CommandRequest}
+     * @return ответ {@link CommandResponse}
+     * @throws IOException при проблемах сетевого обмена
+     * @throws InterruptedException при прерывании потока ожидания
      */
     private CommandResponse sendAndReceive(CommandRequest request) throws IOException, InterruptedException {
         if (!connected || channel == null) throw new IOException("Not connected");
 
-        // ----- 1. Сериализация и отправка (без изменений) -----
         byte[] reqData = serialize(request);
         ByteBuffer lengthBuf = ByteBuffer.allocate(4);
         lengthBuf.putInt(reqData.length);
@@ -220,9 +233,7 @@ public class App {
             channel.write(dataBuf);
         }
 
-        // ----- 2. Чтение ответа (цикл до полного получения) -----
         while (true) {
-            // Чтение длины, если ещё не прочитана
             if (expectedLength == -1) {
                 int read = channel.read(lengthBuffer);
                 if (read == -1) throw new IOException("Сервер закрыл соединение");
@@ -235,32 +246,32 @@ public class App {
                     lengthBuffer.clear();
                     dataBuffer = ByteBuffer.allocate(expectedLength);
                 } else {
-                    // Не хватает байт длины – подождём немного и продолжим
                     Thread.sleep(10);
                     continue;
                 }
             }
 
-            // Чтение тела ответа
             int read = channel.read(dataBuffer);
             if (read == -1) throw new IOException("Сервер закрыл соединение");
             if (dataBuffer.remaining() == 0) {
                 dataBuffer.flip();
                 byte[] respData = new byte[dataBuffer.limit()];
                 dataBuffer.get(respData);
-                // Сброс состояния
                 expectedLength = -1;
                 dataBuffer = null;
                 return deserialize(respData);
             } else {
-                // Не всё тело получено – ждём следующего чтения
                 Thread.sleep(10);
             }
         }
     }
 
     /**
-     * Парсинг ввода пользователя в CommandRequest.
+     * Разбирает пользовательский ввод и формирует объект запроса.
+     * @param input   строка ввода
+     * @param console BufferedReader для интерактивного заполнения полей
+     * @return готовый {@link CommandRequest}
+     * @throws IOException при ошибках чтения с консоли
      */
     private CommandRequest parseUserInput(String input, BufferedReader console) throws IOException {
         String[] parts = input.strip().split("\\s");
@@ -420,7 +431,6 @@ public class App {
 
         if (answer.equals("yes")) {
             result.put("event", "yes");
-            // name
             System.out.print("Имя события (поле не может быть пустым): ");
             while ((line = console.readLine()) != null) {
 
@@ -432,7 +442,6 @@ public class App {
                 System.out.print("Имя события (поле не может быть пустым): ");
             }
 
-            // ticketsCount
             System.out.print("Введите количество билетов (целое число > 0): ");
             while ((line = console.readLine()) != null) {
                 try {
@@ -449,7 +458,6 @@ public class App {
                 }
             }
 
-            // eventType
             System.out.print("Тип события (E_SPORTS, FOOTBALL, BASKETBALL, OPERA, EXPOSITION)(Не может быть пустым): ");
             while ((line = console.readLine()) != null) {
                 String input = line.trim();
@@ -482,7 +490,6 @@ public class App {
      * При обнаружении команд add/add_if_max/add_if_min/update запрашивает параметры у пользователя.
      */
     private void executeScript(String fileName) {
-        // Проверка рекурсии
         if (scriptStack.contains(fileName)) {
             System.out.println("Обнаружена рекурсия! Выполнение скрипта " + fileName + " пропущено.");
             return;
@@ -499,12 +506,10 @@ public class App {
                 String command = tokens[0];
                 Map<String, Object> args = null;
 
-                // Определяем, нужно ли интерактивное заполнение
                 boolean needsInteractive = Set.of("add", "add_if_max", "add_if_min", "update").contains(command);
 
                 if (needsInteractive) {
                     args = new LinkedHashMap<>();
-                    // Для update: сначала извлекаем id, если он указан в строке
                     if (command.equals("update") && tokens.length >= 2) {
                         try {
                             long id = Long.parseLong(tokens[1]);

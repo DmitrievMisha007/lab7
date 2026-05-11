@@ -3,6 +3,10 @@ package core;
 import java.io.Serializable;
 import java.util.Map;
 
+/**
+ * Сериализуемый объект запроса, отправляемый клиентом на сервер.
+ * Содержит имя команды, аргументы, а также логин и пароль для аутентификации.
+ */
 public class CommandRequest implements Serializable {
     private String name;
     private Map<String, Object> args;

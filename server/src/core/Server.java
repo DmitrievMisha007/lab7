@@ -6,6 +6,17 @@ import java.nio.ByteBuffer;
 import java.sql.SQLException;
 import java.util.concurrent.*;
 
+/**
+ * Главный класс сервера.
+ * Принимает входящие TCP-соединения и распределяет обработку запросов
+ * по пулам потоков согласно требованию лабораторной работы:
+ * чтение запросов — FixedThreadPool, обработка команд — FixedThreadPool,
+ * отправка ответа — новый поток ({@link Thread}).
+ *
+ * @see Manager
+ * @see CommandFactory
+ * @see Invoker
+ */
 public class Server {
     private final int port;
     private final Manager manager;
@@ -24,6 +35,10 @@ public class Server {
         this.processPool = Executors.newFixedThreadPool(10);
     }
 
+    /**
+     * Запускает сервер. Создаёт ServerSocket и в бесконечном цикле принимает
+     * подключения, передавая каждое в {@link #readPool}.
+     */
     public void start() {
         try (ServerSocket serverSocket = new ServerSocket(port)) {
             System.out.println("Сервер запущен на порту " + port);
@@ -38,6 +53,9 @@ public class Server {
         }
     }
 
+    /**
+     * Останавливает сервер: снимает флаг {@code running} и завершает пулы потоков.
+     */
     public void stop() {
         running = false;
         shutdown();

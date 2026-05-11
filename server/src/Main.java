@@ -14,7 +14,7 @@ public class Main {
             dbPassword = args[1];
             if (args.length >= 3) appPort = Integer.parseInt(args[2]);
         } else {
-            System.err.println("Использование: java Main <логин_БД> <пароль_БД> [порт_сервера]");
+            System.err.println("Запустите программу в формате: java Main <логин_БД> <пароль_БД> [порт_сервера]");
             System.exit(1);
         }
 

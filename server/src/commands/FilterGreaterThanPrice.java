@@ -13,7 +13,9 @@ import java.util.Map;
 public class FilterGreaterThanPrice implements Command {
     /**
      * Запускает команду
-     *
+     * @param manager менеджер коллекции
+     * @param args    аргументы, описывающие поля билета
+     * @param userId  идентификатор создателя
      * @return Ответ клиенту
      */
     @Override

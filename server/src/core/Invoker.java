@@ -3,6 +3,12 @@ package core;
 import commands.*;
 import interfases.Command;
 
+/**
+ * Хранит ссылки на экземпляры всех доступных команд (паттерн Command).
+ * Инициализирует их в методе {@link #init()}.
+ *
+ * @see Command
+ */
 public class Invoker {
     public Command help;
     public Command info;
